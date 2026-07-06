@@ -1,0 +1,12 @@
+.{
+    .name = .ghostty_vt,
+    .version = "__VERSION__",
+    .fingerprint = 0xfacbbcc7b43c0955,
+    .minimum_zig_version = "0.16.0",
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "include",
+        "lib",
+    },
+}
