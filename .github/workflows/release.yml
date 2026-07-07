@@ -75,6 +75,10 @@ jobs:
             runner: windows-latest
             mode: static
             zig_target: x86_64-windows
+          - target_id: windows-aarch64
+            runner: windows-latest
+            mode: static
+            zig_target: aarch64-windows
     runs-on: ${{ matrix.runner }}
     steps:
       - name: Checkout ghostty-org/ghostty@${{ needs.setup.outputs.ghostty_ref }}
@@ -113,7 +117,7 @@ jobs:
             cp -R "$xc/Headers/." staged/include/
           else
             lib_name="libghostty-vt.a"
-            [ "${{ matrix.target_id }}" = "windows-x86_64" ] && lib_name="ghostty-vt-static.lib"
+            case "${{ matrix.target_id }}" in windows-*) lib_name="ghostty-vt-static.lib" ;; esac
             cp "out/lib/$lib_name" "staged/lib/${{ matrix.target_id }}/"
             cp -R out/include/. staged/include/
           fi

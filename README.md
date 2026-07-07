@@ -28,7 +28,7 @@ On every `vX.Y.Z` tag push, [`.github/workflows/release.yml`](.github/workflows/
    - **macos-universal** — arm64+x86_64 fat binary via ghostty's own xcframework step (needs a
      real macOS runner + Xcode for `lipo`/`xcodebuild`).
    - **linux-x86_64**, **linux-aarch64** — cross-compiled from `ubuntu-latest`.
-   - **windows-x86_64** — built on `windows-latest`.
+   - **windows-x86_64**, **windows-aarch64** — built on `windows-latest`.
 3. Assembles one combined package: shared `include/ghostty/...` headers (identical across
    targets — pure C API, nothing platform-generated) + one static lib per target under
    `lib/<target>/` + a `GHOSTTY_COMMIT` file recording the exact ghostty commit built, plus the
@@ -65,7 +65,10 @@ In `build.zig`, pick the lib subpath for the current target and link it:
 const ghostty_vt = b.dependency("ghostty_vt", .{});
 const vt_lib = switch (target.result.os.tag) {
     .macos => "lib/macos-universal/libghostty-vt.a",
-    .windows => "lib/x86_64-windows/ghostty-vt-static.lib",
+    .windows => switch (target.result.cpu.arch) {
+        .aarch64 => "lib/windows-aarch64/ghostty-vt-static.lib",
+        else => "lib/windows-x86_64/ghostty-vt-static.lib",
+    },
     .linux => switch (target.result.cpu.arch) {
         .aarch64 => "lib/linux-aarch64/libghostty-vt.a",
         else => "lib/linux-x86_64/libghostty-vt.a",
