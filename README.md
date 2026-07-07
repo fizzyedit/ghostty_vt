@@ -15,12 +15,15 @@ the one place that still runs Zig 0.15.x: its CI checks out a pinned ghostty com
 libghostty-vt with 0.15.x for every target platform, and republishes the result as a release
 so nothing needs Zig 0.15 (or the giant binary) downstream.
 
+This repo's own `vX.Y.Z` tags are an independent version for the *package*, unrelated to
+ghostty's own version numbers — see "Why a pinned commit, not a tag" below.
+
 ## What CI builds
 
 On every `vX.Y.Z` tag push, [`.github/workflows/release.yml`](.github/workflows/release.yml):
 
-1. Checks out `ghostty-org/ghostty` at the pinned ref (see `GHOSTTY_REF` in the workflow —
-   currently `v1.3.1`).
+1. Checks out `ghostty-org/ghostty` at the pinned ref (see `GHOSTTY_REF_DEFAULT` in the
+   workflow).
 2. Builds `libghostty-vt` with Zig 0.15.2 (`zig build -Demit-lib-vt -Doptimize=ReleaseFast`) for:
    - **macos-universal** — arm64+x86_64 fat binary via ghostty's own xcframework step (needs a
      real macOS runner + Xcode for `lipo`/`xcodebuild`).
@@ -28,9 +31,20 @@ On every `vX.Y.Z` tag push, [`.github/workflows/release.yml`](.github/workflows/
    - **windows-x86_64** — built on `windows-latest`.
 3. Assembles one combined package: shared `include/ghostty/...` headers (identical across
    targets — pure C API, nothing platform-generated) + one static lib per target under
-   `lib/<target>/`, plus the trivial `build.zig` / `build.zig.zon` from [`package/`](package/) so
-   the tree fetches as a normal Zig package.
+   `lib/<target>/` + a `GHOSTTY_COMMIT` file recording the exact ghostty commit built, plus the
+   trivial `build.zig` / `build.zig.zon` from [`package/`](package/) so the tree fetches as a
+   normal Zig package.
 4. Publishes `ghostty-vt-vX.Y.Z.tar.gz` as a release asset on the tag.
+
+## Why a pinned commit, not a tag
+
+The static-lib / VT-only-xcframework build support we depend on (`-Demit-lib-vt`, see
+`src/build/Config.zig` upstream) has **not shipped in any tagged ghostty release** — confirmed
+absent as of `v1.3.1`, ghostty's latest tag at time of writing. It only exists on ghostty's `main`
+branch. So `GHOSTTY_REF_DEFAULT` in the workflow pins an exact commit SHA on `main`, not a
+release tag. When bumping it, re-verify `-Demit-lib-vt` still exists at the new SHA (grep
+`src/build/Config.zig` for `emit_lib_vt`) before repinning — and re-check whether it has since
+shipped in a tagged release, which would let this go back to tracking tags.
 
 ## Consuming from a Zig project
 
@@ -39,7 +53,7 @@ In the consumer's `build.zig.zon`:
 ```zig
 .dependencies = .{
     .ghostty_vt = .{
-        .url = "https://github.com/fizzyedit/ghostty_vt/releases/download/v1.3.1/ghostty-vt-v1.3.1.tar.gz",
+        .url = "https://github.com/fizzyedit/ghostty_vt/releases/download/v0.1.0/ghostty-vt-v0.1.0.tar.gz",
         .hash = "...", // from `zig fetch --save <url>`
     },
 },
@@ -65,9 +79,9 @@ lib.root_module.link_libc = true;
 
 ## Bumping the pinned ghostty version
 
-1. Update `GHOSTTY_REF` in `.github/workflows/release.yml` to the new ghostty tag.
-2. Push a matching tag here (e.g. ghostty `v1.3.2` → tag `v1.3.2` in this repo). If you need to
-   rebuild the *same* ghostty version (CI fix, no upstream change), suffix it: `v1.3.2-1`.
+1. Update `GHOSTTY_REF_DEFAULT` in `.github/workflows/release.yml` to the new ghostty commit SHA
+   (or tag, once `-Demit-lib-vt` ships in a release).
+2. Bump this repo's own version and push a tag (e.g. `v0.2.0`) — independent of ghostty's version.
 3. Once the release finishes, run `zig fetch --save https://github.com/fizzyedit/ghostty_vt/releases/download/<tag>/ghostty-vt-<tag>.tar.gz`
    in the consuming repo to update its `build.zig.zon` url+hash.
 

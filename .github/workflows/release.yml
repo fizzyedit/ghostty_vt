@@ -3,6 +3,13 @@
 # and publishes one combined package as a release asset. Downstream repos (e.g. fizzyedit/ghostty)
 # consume it as a normal `build.zig.zon` dependency — see README.md "Consuming from a Zig project".
 #
+# This repo's own vX.Y.Z tags are an independent version number for the *package*, not ghostty's
+# version — the static-lib/xcframework-only build support we depend on
+# (`-Demit-lib-vt`, see Config.zig) hasn't shipped in any ghostty release yet (confirmed absent as
+# of the v1.3.1 tag), so GHOSTTY_REF_DEFAULT below pins an exact commit SHA on ghostty's main
+# branch rather than a tag. Bump it deliberately; re-verify -Demit-lib-vt still exists at the new
+# SHA before repinning.
+#
 # A `workflow_dispatch` run (no tag) only exercises the build matrix — useful for testing a new
 # `ghostty_ref` before committing to a tag — and does not publish anything.
 name: Release
@@ -17,10 +24,10 @@ on:
         required: false
         default: ""
 
-# Pinned ghostty-org/ghostty ref this repo builds by default. Bump this (and push a matching tag
-# here) to move to a newer ghostty release — see README.md "Bumping the pinned ghostty version".
+# Pinned ghostty-org/ghostty commit this repo builds by default. Bump this (and push a new tag
+# here) to move to newer ghostty VT code — see README.md "Bumping the pinned ghostty version".
 env:
-  GHOSTTY_REF_DEFAULT: v1.3.1
+  GHOSTTY_REF_DEFAULT: 634957c8e67cad5040f54cef57de5502450d1f5f
 
 permissions:
   contents: write
@@ -99,6 +106,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "staged/lib/${{ matrix.target_id }}" staged/include
+          git -C ghostty rev-parse HEAD > staged/GHOSTTY_COMMIT
           if [ "${{ matrix.mode }}" = "xcframework" ]; then
             xc="out/lib/ghostty-vt.xcframework/macos-arm64_x86_64"
             cp "$xc/libghostty-vt.a" "staged/lib/${{ matrix.target_id }}/"
@@ -143,6 +151,7 @@ jobs:
           done
           # Headers are identical across targets (pure C API) — one copy is enough.
           cp -R dl/staged-macos-universal/include/. "$out/include/"
+          cp dl/staged-macos-universal/GHOSTTY_COMMIT "$out/GHOSTTY_COMMIT"
           tar -czf "${out}.tar.gz" "$out"
           ls -la "${out}.tar.gz"
 
