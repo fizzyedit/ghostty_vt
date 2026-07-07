@@ -1,7 +1,7 @@
 .{
     .name = .ghostty_vt,
     .version = "__VERSION__",
-    .fingerprint = 0xfacbbcc7b43c0955,
+    .fingerprint = 0x207ac874b0c9c976,
     .minimum_zig_version = "0.16.0",
     .paths = .{
         "build.zig",
