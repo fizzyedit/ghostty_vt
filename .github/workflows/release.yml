@@ -157,7 +157,7 @@ jobs:
           out="ghostty-vt-v${VERSION}"
           mkdir -p "$out/lib" "$out/include"
           cp ghostty_vt/package/build.zig "$out/"
-          sed "s/__VERSION__/${VERSION}/" ghostty_vt/package/build.zig.zon > "$out/build.zig.zon"
+          sed "s/\.version = \"0.0.0-dev\"/.version = \"${VERSION}\"/" ghostty_vt/package/build.zig.zon > "$out/build.zig.zon"
           for d in dl/staged-*; do
             cp -R "$d"/lib/. "$out/lib/"
           done
