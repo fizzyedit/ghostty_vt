@@ -71,14 +71,22 @@ jobs:
             runner: ubuntu-latest
             mode: static
             zig_target: aarch64-linux-gnu
+          # simd=false: ghostty's SIMD paths pull in simdutf (C++). Built natively on
+          # windows-latest, Zig 0.15 picks the MSVC ABI, so simdutf demands the MSVC C++
+          # runtime (/DEFAULTLIB:libcpmt.lib) — which downstream mingw-flavored links (e.g.
+          # the fizzy plugin toolchain) can't satisfy. Dropping SIMD yields a pure-Zig static
+          # lib with no C++ runtime dependency; scalar UTF-8 decoding is fine for a terminal
+          # panel. Revisit if/when we cross-compile Windows as *-windows-gnu instead.
           - target_id: windows-x86_64
             runner: windows-latest
             mode: static
             zig_target: x86_64-windows
+            extra_args: "-Dsimd=false"
           - target_id: windows-aarch64
             runner: windows-latest
             mode: static
             zig_target: aarch64-windows
+            extra_args: "-Dsimd=false"
     runs-on: ${{ matrix.runner }}
     steps:
       - name: Checkout ghostty-org/ghostty@${{ needs.setup.outputs.ghostty_ref }}
@@ -101,7 +109,7 @@ jobs:
         if: matrix.mode == 'static'
         working-directory: ghostty
         shell: bash
-        run: zig build -Demit-lib-vt -Doptimize=ReleaseFast -Dtarget=${{ matrix.zig_target }} -p ../out
+        run: zig build -Demit-lib-vt -Doptimize=ReleaseFast -Dtarget=${{ matrix.zig_target }} ${{ matrix.extra_args }} -p ../out
 
       # Normalizes both build modes into a common `staged/lib/<target_id>/...` +
       # `staged/include/...` shape so the publish job can merge every target's output blindly.
